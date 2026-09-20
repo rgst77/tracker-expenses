@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { DEFAULT_CATEGORIES, DEFAULT_RULES, UNCATEGORIZED } from "./categorize";
+import { mergeTransactions } from "./mergeTransactions";
 import type { Category, CategoryRule, Transaction } from "./types";
 
 interface AppState {
@@ -9,6 +10,8 @@ interface AppState {
   currency: string;
 
   loadTransactions: (transactions: Transaction[]) => void;
+  /** Adds to whatever's already loaded instead of replacing it, skipping rows that look like exact duplicates. */
+  appendTransactions: (transactions: Transaction[]) => { added: number; skipped: number };
   reset: () => void;
   setCurrency: (currency: string) => void;
 
@@ -23,13 +26,20 @@ interface AppState {
   removeRule: (id: string) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   transactions: [],
   categories: DEFAULT_CATEGORIES,
   rules: DEFAULT_RULES,
   currency: "EUR",
 
   loadTransactions: (transactions) => set({ transactions }),
+
+  appendTransactions: (incoming) => {
+    const { merged, added, skipped } = mergeTransactions(get().transactions, incoming);
+    set({ transactions: merged });
+    return { added, skipped };
+  },
+
   reset: () => set({ transactions: [] }),
   setCurrency: (currency) => set({ currency }),
 

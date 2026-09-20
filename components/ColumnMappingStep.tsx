@@ -7,6 +7,8 @@ import { CURRENCY_OPTIONS } from "@/lib/format";
 interface Props {
   parsed: ParsedCsv;
   initialMapping: ColumnMapping;
+  existingCount: number;
+  existingCurrency: string;
   onConfirm: (mapping: ColumnMapping, currency: string) => void;
   onCancel: () => void;
 }
@@ -20,14 +22,17 @@ const FIELD_LABELS: { key: keyof ColumnMapping; label: string }[] = [
 export function ColumnMappingStep({
   parsed,
   initialMapping,
+  existingCount,
+  existingCurrency,
   onConfirm,
   onCancel,
 }: Props) {
   const [mapping, setMapping] = useState(initialMapping);
-  const [currency, setCurrency] = useState("EUR");
+  const [currency, setCurrency] = useState(existingCount > 0 ? existingCurrency : "EUR");
   const previewRows = parsed.rows.slice(0, 5);
 
   const isComplete = mapping.date && mapping.description && mapping.amount;
+  const currencyMismatch = existingCount > 0 && currency !== existingCurrency;
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,6 +41,12 @@ export function ColumnMappingStep({
         <p className="text-sm text-zinc-500">
           Detectamos {parsed.rows.length} filas. Revisa que la detección automática sea correcta.
         </p>
+        {existingCount > 0 && (
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
+            Se añadirá a las {existingCount} transacciones que ya tienes cargadas (las filas idénticas a una
+            ya existente se omiten automáticamente).
+          </p>
+        )}
       </div>
 
       {parsed.warnings.length > 0 && parsed.warnings[0].row === 0 && (
@@ -100,6 +111,15 @@ export function ColumnMappingStep({
         </label>
       </div>
 
+      {currencyMismatch && (
+        <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+          Tus datos ya cargados están en {existingCurrency}, pero elegiste {currency}. Los importes no se
+          convierten entre monedas — si continúas se sumarían como si fueran la misma unidad. Cambia la
+          moneda a {existingCurrency} para añadir estas transacciones, o empieza de cero si es un archivo en
+          otra divisa.
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 dark:bg-zinc-900">
@@ -133,11 +153,11 @@ export function ColumnMappingStep({
           Cancelar
         </button>
         <button
-          disabled={!isComplete}
+          disabled={!isComplete || currencyMismatch}
           onClick={() => onConfirm(mapping, currency)}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Importar {parsed.rows.length} transacciones
+          {existingCount > 0 ? "Añadir" : "Importar"} {parsed.rows.length} transacciones
         </button>
       </div>
     </div>
