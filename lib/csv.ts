@@ -1,22 +1,51 @@
 import Papa from "papaparse";
 import type { ColumnMapping, ParsedCsv, ParseWarning } from "./types";
 
-export function parseCsvText(text: string): ParsedCsv {
+function runPapaParse(text: string, quoteChar: string) {
   const result = Papa.parse<Record<string, string>>(text, {
     header: true,
     skipEmptyLines: true,
     transformHeader: (h) => h.trim(),
+    quoteChar,
   });
-
   const headers = result.meta.fields ?? [];
   const rows = result.data.filter((row) =>
     headers.some((h) => (row[h] ?? "").trim() !== "")
   );
+  return { headers, rows, errors: result.errors };
+}
+
+const SWALLOWING_ERROR_CODES = new Set(["MissingQuotes", "TooFewFields"]);
+
+export function parseCsvText(text: string): ParsedCsv {
+  const strict = runPapaParse(text, '"');
+  const hasSwallowedRows = strict.errors.some((e) => SWALLOWING_ERROR_CODES.has(e.code));
 
   // A quote left unclosed in one field can swallow every row after it into
-  // a single field, silently dropping the rest of the file — surface that
-  // instead of returning a shorter row count with no explanation.
-  const warnings: ParseWarning[] = result.errors.map((e) => ({
+  // a single field. Bank exports rarely rely on real CSV quoting (their
+  // fields don't contain literal commas), so when strict parsing looks
+  // broken, retry treating '"' as an ordinary character and keep whichever
+  // result actually recovered more rows.
+  if (hasSwallowedRows) {
+    const lenient = runPapaParse(text, "\0");
+    if (lenient.rows.length > strict.rows.length) {
+      return {
+        headers: lenient.headers,
+        rows: lenient.rows,
+        warnings:
+          strict.errors.length > 0
+            ? [
+                {
+                  row: 0,
+                  message: `detectamos comillas (") sueltas en el archivo — las tratamos como texto normal para no perder filas; revisa que las descripciones se vean bien`,
+                },
+              ]
+            : [],
+      };
+    }
+  }
+
+  const warnings: ParseWarning[] = strict.errors.map((e) => ({
     row: e.row !== undefined ? e.row + 2 : 0, // +1 for the header row, +1 for 1-indexing
     message:
       e.code === "MissingQuotes"
@@ -24,7 +53,7 @@ export function parseCsvText(text: string): ParsedCsv {
         : e.message,
   }));
 
-  return { headers, rows, warnings };
+  return { headers: strict.headers, rows: strict.rows, warnings };
 }
 
 const DATE_HEADER_HINTS = /date|fecha|data/i;

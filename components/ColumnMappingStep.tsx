@@ -38,7 +38,13 @@ export function ColumnMappingStep({
         </p>
       </div>
 
-      {parsed.warnings.length > 0 && (
+      {parsed.warnings.length > 0 && parsed.warnings[0].row === 0 && (
+        <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200">
+          {parsed.warnings[0].message}.
+        </div>
+      )}
+
+      {parsed.warnings.length > 0 && parsed.warnings[0].row !== 0 && (
         <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
           <p className="font-medium">
             El archivo puede tener menos filas de las que debería — encontramos {parsed.warnings.length}{" "}
