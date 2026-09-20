@@ -34,5 +34,4 @@ export interface CategoryRule {
 
 export interface Category {
   name: string;
-  color: string;
 }

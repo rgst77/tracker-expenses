@@ -16,6 +16,7 @@ interface AppState {
   setTransactionCategory: (id: string, category: string) => void;
 
   addCategory: (name: string) => void;
+  renameCategory: (oldName: string, newName: string) => void;
   removeCategory: (name: string) => void;
 
   addRule: (keyword: string, category: string) => void;
@@ -48,15 +49,25 @@ export const useAppStore = create<AppState>((set) => ({
 
   addCategory: (name) =>
     set((state) =>
-      state.categories.some((c) => c.name === name)
+      !name.trim() || state.categories.some((c) => c.name === name)
         ? state
-        : {
-            categories: [
-              ...state.categories,
-              { name, color: randomColor() },
-            ],
-          }
+        : { categories: [...state.categories, { name }] }
     ),
+
+  renameCategory: (oldName, newName) =>
+    set((state) => {
+      const trimmed = newName.trim();
+      if (!trimmed || oldName === trimmed || state.categories.some((c) => c.name === trimmed)) {
+        return state;
+      }
+      return {
+        categories: state.categories.map((c) => (c.name === oldName ? { name: trimmed } : c)),
+        transactions: state.transactions.map((t) =>
+          t.category === oldName ? { ...t, category: trimmed } : t
+        ),
+        rules: state.rules.map((r) => (r.category === oldName ? { ...r, category: trimmed } : r)),
+      };
+    }),
 
   removeCategory: (name) =>
     set((state) => ({
@@ -64,6 +75,7 @@ export const useAppStore = create<AppState>((set) => ({
       transactions: state.transactions.map((t) =>
         t.category === name ? { ...t, category: UNCATEGORIZED } : t
       ),
+      rules: state.rules.filter((r) => r.category !== name),
     })),
 
   addRule: (keyword, category) =>
@@ -77,12 +89,3 @@ export const useAppStore = create<AppState>((set) => ({
   removeRule: (id) =>
     set((state) => ({ rules: state.rules.filter((r) => r.id !== id) })),
 }));
-
-const PALETTE = [
-  "#0984E3", "#00B894", "#FDCB6E", "#E17055", "#6C5CE7",
-  "#00CEC9", "#FD79A8", "#636E72", "#55EFC4", "#FAB1A0",
-];
-
-function randomColor(): string {
-  return PALETTE[Math.floor(Math.random() * PALETTE.length)];
-}

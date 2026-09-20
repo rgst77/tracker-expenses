@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Panel de Gastos",
+  title: "Expenses Tracker",
   description: "Sube tu CSV de movimientos y visualiza tu situación financiera al instante.",
 };
 

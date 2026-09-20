@@ -5,6 +5,8 @@ import { FileUpload } from "@/components/FileUpload";
 import { ColumnMappingStep } from "@/components/ColumnMappingStep";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import { Dashboard } from "@/components/Dashboard";
+import { Logo } from "@/components/Logo";
+import { CategoryManager } from "@/components/CategoryManager";
 import { guessColumnMapping, normalizeAmount, normalizeDate, parseCsvText } from "@/lib/csv";
 import { categorize } from "@/lib/categorize";
 import { exportTransactionsToExcel } from "@/lib/exportExcel";
@@ -19,6 +21,7 @@ export default function Home() {
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [initialMapping, setInitialMapping] = useState<ColumnMapping | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   const transactions = useAppStore((s) => s.transactions);
   const categories = useAppStore((s) => s.categories);
@@ -72,14 +75,10 @@ export default function Home() {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12">
       <header className="flex items-center gap-3">
-        <span
-          className="inline-block h-9 w-9 shrink-0 rounded-lg"
-          style={{ background: "linear-gradient(135deg, var(--series-1), var(--series-6))" }}
-          aria-hidden
-        />
+        <Logo />
         <div>
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
-            Panel de Gastos
+            Expenses Tracker
           </h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             Sube un CSV de movimientos bancarios y consulta tu situación financiera al instante.
@@ -100,9 +99,18 @@ export default function Home() {
 
       {step === "review" && (
         <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-zinc-500">{transactions.length} transacciones importadas</p>
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              {transactions.length} transacciones importadas
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setShowCategoryManager((v) => !v)}
+                className="rounded border px-3 py-1.5 text-sm font-medium"
+                style={{ borderColor: "var(--gridline)", color: "var(--text-primary)" }}
+              >
+                {showCategoryManager ? "Ocultar categorías" : "Gestionar categorías"}
+              </button>
               <button
                 onClick={handleExportExcel}
                 disabled={exporting}
@@ -122,12 +130,13 @@ export default function Home() {
                   setParsed(null);
                   setStep("upload");
                 }}
-                className="text-sm text-blue-600 hover:underline"
+                className="px-2 py-1.5 text-sm text-blue-600 hover:underline"
               >
                 Subir otro archivo
               </button>
             </div>
           </div>
+          {showCategoryManager && <CategoryManager />}
           <Dashboard />
           <TransactionsTable />
         </div>

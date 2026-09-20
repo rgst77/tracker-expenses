@@ -3,15 +3,15 @@ import type { Category, CategoryRule } from "./types";
 export const UNCATEGORIZED = "Sin categorizar";
 
 export const DEFAULT_CATEGORIES: Category[] = [
-  { name: "Ingresos", color: "#00B894" },
-  { name: "Alimentación", color: "#0984E3" },
-  { name: "Transporte", color: "#6C5CE7" },
-  { name: "Vivienda", color: "#E17055" },
-  { name: "Ocio", color: "#FD79A8" },
-  { name: "Salud", color: "#00CEC9" },
-  { name: "Compras", color: "#FDCB6E" },
-  { name: "Suscripciones", color: "#636E72" },
-  { name: UNCATEGORIZED, color: "#B2BEC3" },
+  { name: "Ingresos" },
+  { name: "Alimentación" },
+  { name: "Transporte" },
+  { name: "Vivienda" },
+  { name: "Ocio" },
+  { name: "Salud" },
+  { name: "Compras" },
+  { name: "Suscripciones" },
+  { name: UNCATEGORIZED },
 ];
 
 // Seed rules covering common merchants, meant as a starting point the user
