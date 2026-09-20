@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DEFAULT_CATEGORIES, DEFAULT_RULES, UNCATEGORIZED } from "./categorize";
+import { categorize, DEFAULT_CATEGORIES, DEFAULT_RULES, UNCATEGORIZED } from "./categorize";
 import { mergeTransactions } from "./mergeTransactions";
 import type { Category, CategoryRule, Transaction } from "./types";
 
@@ -89,12 +89,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     })),
 
   addRule: (keyword, category) =>
-    set((state) => ({
-      rules: [
-        ...state.rules,
-        { id: crypto.randomUUID(), keyword, category },
-      ],
-    })),
+    set((state) => {
+      const rules = [...state.rules, { id: crypto.randomUUID(), keyword, category }];
+      // Re-apply immediately so a rule learned from one transaction also
+      // fixes every other already-uncategorized transaction it matches —
+      // otherwise it would only take effect on the *next* CSV upload.
+      const transactions = state.transactions.map((t) =>
+        t.category === UNCATEGORIZED ? { ...t, category: categorize(t.description, t.amount, rules) } : t
+      );
+      return { rules, transactions };
+    }),
 
   removeRule: (id) =>
     set((state) => ({ rules: state.rules.filter((r) => r.id !== id) })),
