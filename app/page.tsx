@@ -67,12 +67,21 @@ export default function Home() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
-      <header>
-        <h1 className="text-2xl font-bold">Panel de Gastos</h1>
-        <p className="text-sm text-zinc-500">
-          Sube un CSV de movimientos bancarios y consulta tu situación financiera al instante.
-        </p>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12">
+      <header className="flex items-center gap-3">
+        <span
+          className="inline-block h-9 w-9 shrink-0 rounded-lg"
+          style={{ background: "linear-gradient(135deg, var(--series-1), var(--series-6))" }}
+          aria-hidden
+        />
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+            Panel de Gastos
+          </h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Sube un CSV de movimientos bancarios y consulta tu situación financiera al instante.
+          </p>
+        </div>
       </header>
 
       {step === "upload" && <FileUpload onFileText={handleFileText} />}

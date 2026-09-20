@@ -2,11 +2,19 @@
 
 import { useMemo } from "react";
 import { useAppStore } from "@/lib/store";
-import { computeKpis, monthlySummaries, cumulativeBalance, categoryTotals, foldTail } from "@/lib/aggregate";
+import {
+  computeKpis,
+  monthlySummaries,
+  cumulativeBalance,
+  monthlySavingsRate,
+  categoryTotals,
+  foldTail,
+} from "@/lib/aggregate";
 import { formatCurrency } from "@/lib/format";
 import { StatTile } from "./charts/StatTile";
 import { MonthlyBarChart } from "./charts/MonthlyBarChart";
 import { BalanceLineChart } from "./charts/BalanceLineChart";
+import { SavingsRateChart } from "./charts/SavingsRateChart";
 import { CategoryBars } from "./charts/CategoryBars";
 import { UNCATEGORIZED } from "@/lib/categorize";
 
@@ -17,6 +25,7 @@ export function Dashboard() {
   const kpis = useMemo(() => computeKpis(transactions), [transactions]);
   const monthly = useMemo(() => monthlySummaries(transactions), [transactions]);
   const balance = useMemo(() => cumulativeBalance(monthly), [monthly]);
+  const rate = useMemo(() => monthlySavingsRate(monthly), [monthly]);
   const catTotals = useMemo(() => foldTail(categoryTotals(transactions)), [transactions]);
 
   const orderedExpenseCategories = useMemo(
@@ -37,9 +46,15 @@ export function Dashboard() {
         <MonthlyBarChart data={monthly} />
       </ChartCard>
 
-      <ChartCard title="Balance acumulado" subtitle="Evolución del ahorro total">
-        <BalanceLineChart data={balance} />
-      </ChartCard>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <ChartCard title="Balance acumulado" subtitle="Evolución del ahorro total">
+          <BalanceLineChart data={balance} />
+        </ChartCard>
+
+        <ChartCard title="Tasa de ahorro" subtitle="Porcentaje ahorrado cada mes">
+          <SavingsRateChart data={rate} />
+        </ChartCard>
+      </div>
 
       <ChartCard title="Gastos por categoría" subtitle="De mayor a menor">
         <CategoryBars data={catTotals} orderedExpenseCategories={orderedExpenseCategories} />
@@ -48,9 +63,12 @@ export function Dashboard() {
   );
 }
 
-function ChartCard({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+export function ChartCard({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg p-5" style={{ background: "var(--surface-1)", border: "1px solid var(--gridline)" }}>
+    <div
+      className="rounded-xl p-5 transition-shadow hover:shadow-md"
+      style={{ background: "var(--surface-1)", border: "1px solid var(--gridline)", boxShadow: "0 1px 2px rgba(11,11,11,0.04)" }}
+    >
       <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{title}</p>
       <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>{subtitle}</p>
       {children}

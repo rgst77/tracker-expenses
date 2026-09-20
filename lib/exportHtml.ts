@@ -2,8 +2,16 @@ import { renderToStaticMarkup } from "react-dom/server.browser";
 import { createElement } from "react";
 import { MonthlyBarChart } from "@/components/charts/MonthlyBarChart";
 import { BalanceLineChart } from "@/components/charts/BalanceLineChart";
+import { SavingsRateChart } from "@/components/charts/SavingsRateChart";
 import { CategoryBars } from "@/components/charts/CategoryBars";
-import { computeKpis, monthlySummaries, cumulativeBalance, categoryTotals, foldTail } from "./aggregate";
+import {
+  computeKpis,
+  monthlySummaries,
+  cumulativeBalance,
+  monthlySavingsRate,
+  categoryTotals,
+  foldTail,
+} from "./aggregate";
 import { formatCurrency } from "./format";
 import { UNCATEGORIZED } from "./categorize";
 import type { Category, Transaction } from "./types";
@@ -19,6 +27,7 @@ export function exportDashboardHtml(transactions: Transaction[], categories: Cat
   const kpis = computeKpis(transactions);
   const monthly = monthlySummaries(transactions);
   const balance = cumulativeBalance(monthly);
+  const rate = monthlySavingsRate(monthly);
   const catTotals = foldTail(categoryTotals(transactions));
   const orderedExpenseCategories = categories
     .map((c) => c.name)
@@ -26,6 +35,7 @@ export function exportDashboardHtml(transactions: Transaction[], categories: Cat
 
   const barChartHtml = renderToStaticMarkup(createElement(MonthlyBarChart, { data: monthly }));
   const balanceChartHtml = renderToStaticMarkup(createElement(BalanceLineChart, { data: balance }));
+  const rateChartHtml = renderToStaticMarkup(createElement(SavingsRateChart, { data: rate }));
   const categoryChartHtml = renderToStaticMarkup(
     createElement(CategoryBars, { data: catTotals, orderedExpenseCategories })
   );
@@ -36,6 +46,7 @@ export function exportDashboardHtml(transactions: Transaction[], categories: Cat
     kpis,
     barChartHtml,
     balanceChartHtml,
+    rateChartHtml,
     categoryChartHtml,
   });
 
@@ -48,9 +59,10 @@ function buildDocument(args: {
   kpis: ReturnType<typeof computeKpis>;
   barChartHtml: string;
   balanceChartHtml: string;
+  rateChartHtml: string;
   categoryChartHtml: string;
 }): string {
-  const { generatedAt, transactionCount, kpis, barChartHtml, balanceChartHtml, categoryChartHtml } = args;
+  const { generatedAt, transactionCount, kpis, barChartHtml, balanceChartHtml, rateChartHtml, categoryChartHtml } = args;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -62,6 +74,7 @@ function buildDocument(args: {
 </head>
 <body>
   <header class="header">
+    <span class="logo-dot" aria-hidden="true"></span>
     <div>
       <h1>Panel de Gastos</h1>
       <p class="muted">${transactionCount} transacciones · generado el ${escapeHtml(generatedAt)}</p>
@@ -77,7 +90,12 @@ function buildDocument(args: {
     </div>
 
     ${chartCard("Ingresos vs gastos por mes", "Comparación mensual", barChartHtml)}
-    ${chartCard("Balance acumulado", "Evolución del ahorro total", balanceChartHtml)}
+
+    <div class="grid grid-cols-1 gap-6 lg-grid-cols-2">
+      ${chartCard("Balance acumulado", "Evolución del ahorro total", balanceChartHtml)}
+      ${chartCard("Tasa de ahorro", "Porcentaje ahorrado cada mes", rateChartHtml)}
+    </div>
+
     ${chartCard("Gastos por categoría", "De mayor a menor", categoryChartHtml)}
   </main>
 </body>
@@ -86,14 +104,15 @@ function buildDocument(args: {
 
 function statTile(label: string, value: string, tone: "default" | "good" | "bad"): string {
   const color = tone === "good" ? "var(--success-text)" : tone === "bad" ? "var(--series-8)" : "var(--text-primary)";
-  return `<div class="rounded-lg p-4 card">
+  const accent = tone === "good" ? "var(--success-text)" : tone === "bad" ? "var(--series-8)" : "var(--series-1)";
+  return `<div class="rounded-xl p-4 card" style="border-top:3px solid ${accent}">
     <p class="text-xs font-medium uppercase tracking-wide muted">${escapeHtml(label)}</p>
     <p class="mt-1 text-2xl font-semibold" style="color:${color}">${escapeHtml(value)}</p>
   </div>`;
 }
 
 function chartCard(title: string, subtitle: string, bodyHtml: string): string {
-  return `<div class="rounded-lg p-5 card">
+  return `<div class="rounded-xl p-5 card">
     <p class="text-sm font-semibold">${escapeHtml(title)}</p>
     <p class="mb-3 text-xs muted">${escapeHtml(subtitle)}</p>
     ${bodyHtml}
@@ -147,16 +166,18 @@ const DOCUMENT_CSS = `
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--background); color: var(--text-primary); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 .muted { color: var(--text-muted); }
-.card { background: var(--surface-1); border: 1px solid var(--gridline); }
-.header { padding: 24px 32px; border-bottom: 1px solid var(--gridline); }
-.header h1 { margin: 0; font-size: 1.5rem; }
+.card { background: var(--surface-1); border: 1px solid var(--gridline); box-shadow: 0 1px 2px rgba(11,11,11,0.04); }
+.header { display: flex; align-items: center; gap: 12px; padding: 24px 32px; border-bottom: 1px solid var(--gridline); }
+.header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
 .header p { margin: 4px 0 0; font-size: 0.85rem; }
-.container { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+.logo-dot { display: inline-block; width: 36px; height: 36px; flex-shrink: 0; border-radius: 0.5rem; background: linear-gradient(135deg, var(--series-1), var(--series-6)); }
+.container { max-width: 1024px; margin: 0 auto; padding: 24px 16px 48px; }
 .container > * + * { margin-top: 32px; }
 
 .relative { position: relative; }
 .overflow-x-auto { overflow-x: auto; }
 .rounded-lg { border-radius: 0.5rem; }
+.rounded-xl { border-radius: 0.75rem; }
 .rounded-sm { border-radius: 0.125rem; }
 .p-4 { padding: 1rem; }
 .p-5 { padding: 1.25rem; }
@@ -185,8 +206,13 @@ body { margin: 0; background: var(--background); color: var(--text-primary); fon
 .w-2\\.5 { width: 0.625rem; }
 
 .grid { display: grid; }
+.grid-cols-1 { grid-template-columns: minmax(0, 1fr); }
 .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.gap-6 { gap: 1.5rem; }
 @media (min-width: 640px) {
   .sm\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .lg-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 `;

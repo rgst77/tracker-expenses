@@ -68,6 +68,18 @@ export function computeKpis(transactions: Transaction[]): Kpis {
   return { income, expense, balance, savingsRate };
 }
 
+export interface MonthlyRate {
+  month: string;
+  rate: number; // 0-100, 0 if no income that month
+}
+
+export function monthlySavingsRate(summaries: MonthlySummary[]): MonthlyRate[] {
+  return summaries.map((s) => ({
+    month: s.month,
+    rate: s.income > 0 ? Math.round(((s.income - s.expense) / s.income) * 1000) / 10 : 0,
+  }));
+}
+
 /** Folds everything past the token ceiling into "Otros" so a chart never seats more than 8 categorical slots. */
 export function foldTail(totals: CategoryTotal[], cap = 7): CategoryTotal[] {
   if (totals.length <= cap) return totals;
