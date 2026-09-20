@@ -11,6 +11,7 @@ import { CategoryManager } from "@/components/CategoryManager";
 import { guessColumnMapping, normalizeAmount, normalizeDate, parseCsvText } from "@/lib/csv";
 import { categorize } from "@/lib/categorize";
 import { exportTransactionsToExcel } from "@/lib/exportExcel";
+import { importTransactionsFromExcel } from "@/lib/importExcel";
 import { exportDashboardHtml } from "@/lib/exportHtml";
 import { useAppStore } from "@/lib/store";
 import type { ColumnMapping, ParsedCsv, Transaction } from "@/lib/types";
@@ -24,12 +25,15 @@ export default function Home() {
   const [exporting, setExporting] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [importSummary, setImportSummary] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
 
   const transactions = useAppStore((s) => s.transactions);
   const categories = useAppStore((s) => s.categories);
   const currency = useAppStore((s) => s.currency);
   const rules = useAppStore((s) => s.rules);
   const appendTransactions = useAppStore((s) => s.appendTransactions);
+  const addCategory = useAppStore((s) => s.addCategory);
   const reset = useAppStore((s) => s.reset);
   const setCurrency = useAppStore((s) => s.setCurrency);
 
@@ -65,6 +69,32 @@ export default function Home() {
     );
     setParsed(null);
     setStep("review");
+  }
+
+  async function handleRestoreExcel(file: File) {
+    setRestoring(true);
+    setRestoreError(null);
+    try {
+      const restored = await importTransactionsFromExcel(file);
+      const knownCategories = new Set(categories.map((c) => c.name));
+      for (const t of restored) {
+        if (t.category && !knownCategories.has(t.category)) {
+          addCategory(t.category);
+          knownCategories.add(t.category);
+        }
+      }
+      const { added, skipped } = appendTransactions(restored);
+      setImportSummary(
+        skipped > 0
+          ? `${added} transacciones restauradas desde el Excel (${skipped} ya existían y se omitieron).`
+          : `${added} transacciones restauradas desde el Excel.`
+      );
+      setStep("review");
+    } catch (err) {
+      setRestoreError(err instanceof Error ? err.message : "No se pudo leer el archivo.");
+    } finally {
+      setRestoring(false);
+    }
   }
 
   async function handleExportExcel() {
@@ -112,6 +142,29 @@ export default function Home() {
             </div>
           )}
           <FileUpload onFileText={handleFileText} />
+
+          <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            <span>¿Tienes un Excel descargado antes de esta app?</span>
+            <label className="cursor-pointer font-medium text-blue-600 hover:underline">
+              {restoring ? "Restaurando…" : "Súbelo para juntar tu histórico"}
+              <input
+                type="file"
+                accept=".xlsx"
+                className="hidden"
+                disabled={restoring}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleRestoreExcel(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+          {restoreError && (
+            <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+              {restoreError}
+            </div>
+          )}
         </div>
       )}
 
