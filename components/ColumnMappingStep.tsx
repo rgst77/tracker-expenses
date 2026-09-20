@@ -19,6 +19,16 @@ const FIELD_LABELS: { key: keyof ColumnMapping; label: string }[] = [
   { key: "amount", label: "Importe" },
 ];
 
+const selectStyle = { borderColor: "var(--gridline)", background: "var(--surface-1)", color: "var(--text-primary)" };
+
+function banner(hue: string) {
+  return {
+    border: `1px solid ${hue}`,
+    background: `color-mix(in srgb, ${hue} 10%, var(--surface-1))`,
+    color: "var(--text-primary)",
+  };
+}
+
 export function ColumnMappingStep({
   parsed,
   initialMapping,
@@ -37,8 +47,10 @@ export function ColumnMappingStep({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-semibold">Confirma qué columna es cuál</h2>
-        <p className="text-sm text-zinc-500">
+        <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
+          Confirma qué columna es cuál
+        </h2>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
           Detectamos {parsed.rows.length} filas. Revisa que la detección automática sea correcta.
         </p>
         {existingCount > 0 && (
@@ -50,13 +62,13 @@ export function ColumnMappingStep({
       </div>
 
       {parsed.warnings.length > 0 && parsed.warnings[0].row === 0 && (
-        <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200">
+        <div className="rounded p-3 text-sm" style={banner("var(--series-1)")}>
           {parsed.warnings[0].message}.
         </div>
       )}
 
       {parsed.warnings.length > 0 && parsed.warnings[0].row !== 0 && (
-        <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+        <div className="rounded p-3 text-sm" style={banner("var(--series-2)")}>
           <p className="font-medium">
             El archivo puede tener menos filas de las que debería — encontramos {parsed.warnings.length}{" "}
             {parsed.warnings.length === 1 ? "problema" : "problemas"} al leerlo:
@@ -78,9 +90,10 @@ export function ColumnMappingStep({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {FIELD_LABELS.map(({ key, label }) => (
           <label key={key} className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">{label}</span>
+            <span className="font-medium" style={{ color: "var(--text-primary)" }}>{label}</span>
             <select
-              className="rounded border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded border px-2 py-1.5"
+              style={selectStyle}
               value={mapping[key] ?? ""}
               onChange={(e) =>
                 setMapping((m) => ({ ...m, [key]: e.target.value || null }))
@@ -96,9 +109,10 @@ export function ColumnMappingStep({
           </label>
         ))}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Moneda</span>
+          <span className="font-medium" style={{ color: "var(--text-primary)" }}>Moneda</span>
           <select
-            className="rounded border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded border px-2 py-1.5"
+            style={selectStyle}
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
           >
@@ -112,7 +126,7 @@ export function ColumnMappingStep({
       </div>
 
       {currencyMismatch && (
-        <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+        <div className="rounded p-3 text-sm" style={banner("var(--series-8)")}>
           Tus datos ya cargados están en {existingCurrency}, pero elegiste {currency}. Los importes no se
           convierten entre monedas — si continúas se sumarían como si fueran la misma unidad. Cambia la
           moneda a {existingCurrency} para añadir estas transacciones, o empieza de cero si es un archivo en
@@ -120,12 +134,12 @@ export function ColumnMappingStep({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
+      <div className="overflow-x-auto rounded border" style={{ borderColor: "var(--gridline)" }}>
         <table className="w-full text-left text-sm">
-          <thead className="bg-zinc-50 dark:bg-zinc-900">
+          <thead style={{ background: "var(--background)" }}>
             <tr>
               {parsed.headers.map((h) => (
-                <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">
+                <th key={h} className="whitespace-nowrap px-3 py-2 font-medium" style={{ color: "var(--text-primary)" }}>
                   {h}
                 </th>
               ))}
@@ -133,9 +147,9 @@ export function ColumnMappingStep({
           </thead>
           <tbody>
             {previewRows.map((row, i) => (
-              <tr key={i} className="border-t border-zinc-100 dark:border-zinc-800">
+              <tr key={i} className="border-t" style={{ borderColor: "var(--gridline)" }}>
                 {parsed.headers.map((h) => (
-                  <td key={h} className="whitespace-nowrap px-3 py-2 text-zinc-600 dark:text-zinc-400">
+                  <td key={h} className="whitespace-nowrap px-3 py-2" style={{ color: "var(--text-secondary)" }}>
                     {row[h]}
                   </td>
                 ))}
@@ -148,7 +162,8 @@ export function ColumnMappingStep({
       <div className="flex gap-3">
         <button
           onClick={onCancel}
-          className="rounded border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
+          className="rounded border px-4 py-2 text-sm"
+          style={{ borderColor: "var(--gridline)", color: "var(--text-primary)" }}
         >
           Cancelar
         </button>

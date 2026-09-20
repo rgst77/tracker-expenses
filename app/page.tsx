@@ -7,6 +7,7 @@ import { TransactionsTable } from "@/components/TransactionsTable";
 import { Dashboard } from "@/components/Dashboard";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { HowItWorks } from "@/components/HowItWorks";
 import { CategoryManager } from "@/components/CategoryManager";
 import { guessColumnMapping, normalizeAmount, normalizeDate, parseCsvText } from "@/lib/csv";
 import { categorize } from "@/lib/categorize";
@@ -143,6 +144,8 @@ export default function Home() {
           )}
           <FileUpload onFileText={handleFileText} />
 
+          {transactions.length === 0 && <HowItWorks />}
+
           <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
             <span>¿Tienes un Excel descargado antes de esta app?</span>
             <label className="cursor-pointer font-medium text-blue-600 hover:underline">
@@ -161,7 +164,14 @@ export default function Home() {
             </label>
           </div>
           {restoreError && (
-            <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+            <div
+              className="rounded p-3 text-sm"
+              style={{
+                border: "1px solid var(--series-8)",
+                background: "color-mix(in srgb, var(--series-8) 10%, var(--surface-1))",
+                color: "var(--text-primary)",
+              }}
+            >
               {restoreError}
             </div>
           )}
@@ -183,7 +193,12 @@ export default function Home() {
         <div className="flex flex-col gap-6">
           {importSummary && (
             <div
-              className="rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200"
+              className="rounded p-3 text-sm"
+              style={{
+                border: "1px solid var(--series-6)",
+                background: "color-mix(in srgb, var(--series-6) 10%, var(--surface-1))",
+                color: "var(--text-primary)",
+              }}
               role="status"
             >
               {importSummary}

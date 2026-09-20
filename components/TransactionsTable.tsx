@@ -63,21 +63,21 @@ export function TransactionsTable() {
         Mostrar solo sin categorizar ({uncategorizedCount})
       </label>
 
-      <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
+      <div className="overflow-x-auto rounded border" style={{ borderColor: "var(--gridline)" }}>
         <table className="w-full text-left text-sm">
-          <thead className="bg-zinc-50 dark:bg-zinc-900">
+          <thead style={{ background: "var(--background)" }}>
             <tr>
-              <th className="px-3 py-2 font-medium">Fecha</th>
-              <th className="px-3 py-2 font-medium">Descripción</th>
-              <th className="px-3 py-2 font-medium">Categoría</th>
-              <th className="px-3 py-2 text-right font-medium">Importe</th>
+              <th className="px-3 py-2 font-medium" style={{ color: "var(--text-primary)" }}>Fecha</th>
+              <th className="px-3 py-2 font-medium" style={{ color: "var(--text-primary)" }}>Descripción</th>
+              <th className="px-3 py-2 font-medium" style={{ color: "var(--text-primary)" }}>Categoría</th>
+              <th className="px-3 py-2 text-right font-medium" style={{ color: "var(--text-primary)" }}>Importe</th>
             </tr>
           </thead>
           <tbody>
             {visibleTransactions.map((t) => (
               <Fragment key={t.id}>
-                <tr key={t.id} className="border-t border-zinc-100 dark:border-zinc-800">
-                  <td className="whitespace-nowrap px-3 py-2 text-zinc-500">{t.date}</td>
+                <tr className="border-t" style={{ borderColor: "var(--gridline)" }}>
+                  <td className="whitespace-nowrap px-3 py-2" style={{ color: "var(--text-muted)" }}>{t.date}</td>
                   <td className="px-3 py-2">
                     {editingId === t.id ? (
                       <input
@@ -91,13 +91,15 @@ export function TransactionsTable() {
                           if (e.key === "Enter") e.currentTarget.blur();
                           if (e.key === "Escape") setEditingId(null);
                         }}
-                        className="w-full rounded border border-blue-400 px-1 py-0.5"
+                        className="w-full rounded border px-1 py-0.5"
+                        style={{ borderColor: "var(--series-1)", background: "var(--surface-1)", color: "var(--text-primary)" }}
                       />
                     ) : (
                       <button
                         onClick={() => setEditingId(t.id)}
                         className="text-left hover:underline"
                         title="Haz clic para renombrar"
+                        style={{ color: "var(--text-primary)" }}
                       >
                         {t.description}
                       </button>
@@ -107,7 +109,8 @@ export function TransactionsTable() {
                     <select
                       value={t.category}
                       onChange={(e) => handleCategoryChange(t.id, t.category, t.description, e.target.value)}
-                      className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+                      className="rounded border px-2 py-1 text-xs"
+                      style={{ borderColor: "var(--gridline)", background: "var(--surface-1)", color: "var(--text-primary)" }}
                     >
                       {categories.map((c) => (
                         <option key={c.name} value={c.name}>
@@ -117,16 +120,15 @@ export function TransactionsTable() {
                     </select>
                   </td>
                   <td
-                    className={`whitespace-nowrap px-3 py-2 text-right font-medium ${
-                      t.amount >= 0 ? "text-emerald-600" : "text-rose-600"
-                    }`}
+                    className="whitespace-nowrap px-3 py-2 text-right font-medium"
+                    style={{ color: t.amount >= 0 ? "var(--success-text)" : "var(--series-8)" }}
                   >
                     {formatCurrencyPrecise(t.amount, currency)}
                   </td>
                 </tr>
                 {ruleSuggestion?.transactionId === t.id && (
                   <tr>
-                    <td colSpan={4} className="border-t border-zinc-100 px-3 py-2 dark:border-zinc-800">
+                    <td colSpan={4} className="border-t px-3 py-2" style={{ borderColor: "var(--gridline)" }}>
                       <div
                         className="flex flex-wrap items-center gap-2 rounded p-2 text-xs"
                         style={{ background: "var(--surface-1)", border: "1px solid var(--gridline)" }}
