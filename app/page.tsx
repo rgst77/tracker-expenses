@@ -8,6 +8,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { guessColumnMapping, normalizeAmount, normalizeDate, parseCsvText } from "@/lib/csv";
 import { categorize } from "@/lib/categorize";
 import { exportTransactionsToExcel } from "@/lib/exportExcel";
+import { exportDashboardHtml } from "@/lib/exportHtml";
 import { useAppStore } from "@/lib/store";
 import type { ColumnMapping, ParsedCsv, Transaction } from "@/lib/types";
 
@@ -20,6 +21,7 @@ export default function Home() {
   const [exporting, setExporting] = useState(false);
 
   const transactions = useAppStore((s) => s.transactions);
+  const categories = useAppStore((s) => s.categories);
   const rules = useAppStore((s) => s.rules);
   const loadTransactions = useAppStore((s) => s.loadTransactions);
   const reset = useAppStore((s) => s.reset);
@@ -60,6 +62,10 @@ export default function Home() {
     }
   }
 
+  function handleExportHtml() {
+    exportDashboardHtml(transactions, categories);
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
       <header>
@@ -91,6 +97,12 @@ export default function Home() {
                 className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 {exporting ? "Generando…" : "Descargar Excel"}
+              </button>
+              <button
+                onClick={handleExportHtml}
+                className="rounded border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-600"
+              >
+                Descargar HTML
               </button>
               <button
                 onClick={() => {
