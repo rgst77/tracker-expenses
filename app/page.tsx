@@ -7,6 +7,7 @@ import { TransactionsTable } from "@/components/TransactionsTable";
 import { Dashboard } from "@/components/Dashboard";
 import { guessColumnMapping, normalizeAmount, normalizeDate, parseCsvText } from "@/lib/csv";
 import { categorize } from "@/lib/categorize";
+import { exportTransactionsToExcel } from "@/lib/exportExcel";
 import { useAppStore } from "@/lib/store";
 import type { ColumnMapping, ParsedCsv, Transaction } from "@/lib/types";
 
@@ -16,6 +17,7 @@ export default function Home() {
   const [step, setStep] = useState<Step>("upload");
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [initialMapping, setInitialMapping] = useState<ColumnMapping | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const transactions = useAppStore((s) => s.transactions);
   const rules = useAppStore((s) => s.rules);
@@ -49,6 +51,15 @@ export default function Home() {
     setStep("review");
   }
 
+  async function handleExportExcel() {
+    setExporting(true);
+    try {
+      await exportTransactionsToExcel(transactions);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
       <header>
@@ -73,16 +84,25 @@ export default function Home() {
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <p className="text-sm text-zinc-500">{transactions.length} transacciones importadas</p>
-            <button
-              onClick={() => {
-                reset();
-                setParsed(null);
-                setStep("upload");
-              }}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Subir otro archivo
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleExportExcel}
+                disabled={exporting}
+                className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {exporting ? "Generando…" : "Descargar Excel"}
+              </button>
+              <button
+                onClick={() => {
+                  reset();
+                  setParsed(null);
+                  setStep("upload");
+                }}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Subir otro archivo
+              </button>
+            </div>
           </div>
           <Dashboard />
           <TransactionsTable />
