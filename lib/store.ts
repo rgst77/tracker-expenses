@@ -6,9 +6,11 @@ interface AppState {
   transactions: Transaction[];
   categories: Category[];
   rules: CategoryRule[];
+  currency: string;
 
   loadTransactions: (transactions: Transaction[]) => void;
   reset: () => void;
+  setCurrency: (currency: string) => void;
 
   renameTransaction: (id: string, description: string) => void;
   setTransactionCategory: (id: string, category: string) => void;
@@ -24,9 +26,11 @@ export const useAppStore = create<AppState>((set) => ({
   transactions: [],
   categories: DEFAULT_CATEGORIES,
   rules: DEFAULT_RULES,
+  currency: "EUR",
 
   loadTransactions: (transactions) => set({ transactions }),
   reset: () => set({ transactions: [] }),
+  setCurrency: (currency) => set({ currency }),
 
   renameTransaction: (id, description) =>
     set((state) => ({

@@ -21,6 +21,7 @@ import { UNCATEGORIZED } from "@/lib/categorize";
 export function Dashboard() {
   const transactions = useAppStore((s) => s.transactions);
   const categories = useAppStore((s) => s.categories);
+  const currency = useAppStore((s) => s.currency);
 
   const kpis = useMemo(() => computeKpis(transactions), [transactions]);
   const monthly = useMemo(() => monthlySummaries(transactions), [transactions]);
@@ -36,9 +37,9 @@ export function Dashboard() {
   return (
     <div className="flex flex-col gap-8">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Ingresos" value={formatCurrency(kpis.income)} tone="good" />
-        <StatTile label="Gastos" value={formatCurrency(kpis.expense)} tone="bad" />
-        <StatTile label="Balance" value={formatCurrency(kpis.balance)} tone={kpis.balance >= 0 ? "good" : "bad"} />
+        <StatTile label="Ingresos" value={formatCurrency(kpis.income, currency)} tone="good" />
+        <StatTile label="Gastos" value={formatCurrency(kpis.expense, currency)} tone="bad" />
+        <StatTile label="Balance" value={formatCurrency(kpis.balance, currency)} tone={kpis.balance >= 0 ? "good" : "bad"} />
         <StatTile label="Tasa de ahorro" value={`${kpis.savingsRate.toFixed(1)}%`} />
       </div>
 

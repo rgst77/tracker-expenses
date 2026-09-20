@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CategoryTotal } from "@/lib/aggregate";
 import { formatCurrency } from "@/lib/format";
 import { categoryColorVar } from "@/lib/chartColors";
+import { useAppStore } from "@/lib/store";
 import { ChartTooltip } from "./ChartTooltip";
 
 interface Props {
@@ -16,6 +17,7 @@ const BAR_GAP = 10;
 const PAD = { top: 8, right: 100, bottom: 8, left: 128 };
 
 export function CategoryBars({ data, orderedExpenseCategories }: Props) {
+  const currency = useAppStore((s) => s.currency);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   if (data.length === 0) return <EmptyState />;
@@ -50,7 +52,7 @@ export function CategoryBars({ data, orderedExpenseCategories }: Props) {
                 tabIndex={0}
               />
               <text x={PAD.left + w + 8} y={y + BAR_HEIGHT / 2} dominantBaseline="middle" fontSize={12} fontWeight={600} fill="var(--text-primary)">
-                {formatCurrency(d.total)}
+                {formatCurrency(d.total, currency)}
               </text>
             </g>
           );
@@ -63,7 +65,7 @@ export function CategoryBars({ data, orderedExpenseCategories }: Props) {
           y={PAD.top + hoverIdx * (BAR_HEIGHT + BAR_GAP)}
           containerWidth={width}
           title={data[hoverIdx].category}
-          rows={[{ label: "Gasto total", value: formatCurrency(data[hoverIdx].total), colorVar: categoryColorVar(data[hoverIdx].category, orderedExpenseCategories) }]}
+          rows={[{ label: "Gasto total", value: formatCurrency(data[hoverIdx].total, currency), colorVar: categoryColorVar(data[hoverIdx].category, orderedExpenseCategories) }]}
         />
       )}
     </div>

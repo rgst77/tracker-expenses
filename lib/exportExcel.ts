@@ -3,12 +3,21 @@ import type { Transaction } from "./types";
 const HEADER_FILL = "FF2A78D6"; // series-1 blue, ARGB
 const HEADER_FONT = "FFFFFFFF";
 
+// "$" alone is ambiguous across USD/NZD/AUD/MXN/ARS, so only unambiguous
+// symbols get one — everything else falls back to the plain ISO code.
+const UNAMBIGUOUS_SYMBOL: Record<string, string> = { EUR: "€", GBP: "£" };
+
+function excelAmountFormat(currency: string): string {
+  const label = UNAMBIGUOUS_SYMBOL[currency] ?? currency;
+  return `#,##0.00 "${label}";[Red]-#,##0.00 "${label}"`;
+}
+
 /**
  * Single "Transactions" sheet, deliberately plain — no Rules/Categories/
  * Dashboard tabs. The point is a clean table the user can pivot-table
  * themselves, not a pre-built report to maintain in two places.
  */
-export async function exportTransactionsToExcel(transactions: Transaction[]): Promise<void> {
+export async function exportTransactionsToExcel(transactions: Transaction[], currency: string = "EUR"): Promise<void> {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Panel de Gastos";
@@ -42,7 +51,7 @@ export async function exportTransactionsToExcel(transactions: Transaction[]): Pr
   }
 
   const amountCol = sheet.getColumn("amount");
-  amountCol.numFmt = '#,##0.00 "€";[Red]-#,##0.00 "€"';
+  amountCol.numFmt = excelAmountFormat(currency);
   const dateCol = sheet.getColumn("date");
   dateCol.numFmt = "yyyy-mm-dd";
 

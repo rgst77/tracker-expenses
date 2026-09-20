@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import type { ColumnMapping, ParsedCsv } from "./types";
+import type { ColumnMapping, ParsedCsv, ParseWarning } from "./types";
 
 export function parseCsvText(text: string): ParsedCsv {
   const result = Papa.parse<Record<string, string>>(text, {
@@ -13,7 +13,18 @@ export function parseCsvText(text: string): ParsedCsv {
     headers.some((h) => (row[h] ?? "").trim() !== "")
   );
 
-  return { headers, rows };
+  // A quote left unclosed in one field can swallow every row after it into
+  // a single field, silently dropping the rest of the file — surface that
+  // instead of returning a shorter row count with no explanation.
+  const warnings: ParseWarning[] = result.errors.map((e) => ({
+    row: e.row !== undefined ? e.row + 2 : 0, // +1 for the header row, +1 for 1-indexing
+    message:
+      e.code === "MissingQuotes"
+        ? "comilla (\") sin cerrar en un campo — probablemente se comieron las filas siguientes"
+        : e.message,
+  }));
+
+  return { headers, rows, warnings };
 }
 
 const DATE_HEADER_HINTS = /date|fecha|data/i;

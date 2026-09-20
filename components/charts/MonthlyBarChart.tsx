@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { MonthlySummary } from "@/lib/aggregate";
 import { formatCurrency, formatMonth } from "@/lib/format";
 import { niceTicks } from "@/lib/chartScale";
+import { useAppStore } from "@/lib/store";
 import { ChartTooltip } from "./ChartTooltip";
 
 interface Props {
@@ -16,6 +17,7 @@ const BAR_MAX_WIDTH = 24;
 const BAR_GAP = 2;
 
 export function MonthlyBarChart({ data }: Props) {
+  const currency = useAppStore((s) => s.currency);
   const [hover, setHover] = useState<{ x: number; y: number; month: string; series: "Ingresos" | "Gastos"; value: number } | null>(null);
 
   if (data.length === 0) {
@@ -48,7 +50,7 @@ export function MonthlyBarChart({ data }: Props) {
               strokeWidth={1}
             />
             <text x={PAD.left - 8} y={y(t)} textAnchor="end" dominantBaseline="middle" fontSize={11} fill="var(--text-muted)">
-              {formatCurrency(t)}
+              {formatCurrency(t, currency)}
             </text>
           </g>
         ))}
@@ -118,7 +120,7 @@ export function MonthlyBarChart({ data }: Props) {
           rows={[
             {
               label: hover.series,
-              value: formatCurrency(hover.value),
+              value: formatCurrency(hover.value, currency),
               colorVar: hover.series === "Ingresos" ? "var(--series-1)" : "var(--series-8)",
             },
           ]}

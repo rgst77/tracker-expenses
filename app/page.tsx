@@ -22,9 +22,11 @@ export default function Home() {
 
   const transactions = useAppStore((s) => s.transactions);
   const categories = useAppStore((s) => s.categories);
+  const currency = useAppStore((s) => s.currency);
   const rules = useAppStore((s) => s.rules);
   const loadTransactions = useAppStore((s) => s.loadTransactions);
   const reset = useAppStore((s) => s.reset);
+  const setCurrency = useAppStore((s) => s.setCurrency);
 
   function handleFileText(text: string) {
     const csv = parseCsvText(text);
@@ -33,7 +35,7 @@ export default function Home() {
     setStep("mapping");
   }
 
-  function handleConfirmMapping(mapping: ColumnMapping) {
+  function handleConfirmMapping(mapping: ColumnMapping, currency: string) {
     if (!parsed || !mapping.date || !mapping.description || !mapping.amount) return;
 
     const imported: Transaction[] = parsed.rows.map((row, i) => {
@@ -49,6 +51,7 @@ export default function Home() {
       };
     });
 
+    setCurrency(currency);
     loadTransactions(imported);
     setStep("review");
   }
@@ -56,14 +59,14 @@ export default function Home() {
   async function handleExportExcel() {
     setExporting(true);
     try {
-      await exportTransactionsToExcel(transactions);
+      await exportTransactionsToExcel(transactions, currency);
     } finally {
       setExporting(false);
     }
   }
 
   function handleExportHtml() {
-    exportDashboardHtml(transactions, categories);
+    exportDashboardHtml(transactions, categories, currency);
   }
 
   return (

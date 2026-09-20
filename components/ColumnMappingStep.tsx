@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import type { ColumnMapping, ParsedCsv } from "@/lib/types";
+import { CURRENCY_OPTIONS } from "@/lib/format";
 
 interface Props {
   parsed: ParsedCsv;
   initialMapping: ColumnMapping;
-  onConfirm: (mapping: ColumnMapping) => void;
+  onConfirm: (mapping: ColumnMapping, currency: string) => void;
   onCancel: () => void;
 }
 
@@ -23,6 +24,7 @@ export function ColumnMappingStep({
   onCancel,
 }: Props) {
   const [mapping, setMapping] = useState(initialMapping);
+  const [currency, setCurrency] = useState("EUR");
   const previewRows = parsed.rows.slice(0, 5);
 
   const isComplete = mapping.date && mapping.description && mapping.amount;
@@ -35,6 +37,26 @@ export function ColumnMappingStep({
           Detectamos {parsed.rows.length} filas. Revisa que la detección automática sea correcta.
         </p>
       </div>
+
+      {parsed.warnings.length > 0 && (
+        <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          <p className="font-medium">
+            El archivo puede tener menos filas de las que debería — encontramos {parsed.warnings.length}{" "}
+            {parsed.warnings.length === 1 ? "problema" : "problemas"} al leerlo:
+          </p>
+          <ul className="mt-1 list-disc pl-5">
+            {parsed.warnings.map((w, i) => (
+              <li key={i}>
+                Fila {w.row}: {w.message}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1">
+            Revisa esa fila en tu CSV original (ábrelo con un editor de texto) y vuelve a subirlo si faltan
+            transacciones.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {FIELD_LABELS.map(({ key, label }) => (
@@ -56,6 +78,20 @@ export function ColumnMappingStep({
             </select>
           </label>
         ))}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium">Moneda</span>
+          <select
+            className="rounded border border-zinc-300 bg-white px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+          >
+            {CURRENCY_OPTIONS.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
@@ -92,7 +128,7 @@ export function ColumnMappingStep({
         </button>
         <button
           disabled={!isComplete}
-          onClick={() => onConfirm(mapping)}
+          onClick={() => onConfirm(mapping, currency)}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           Importar {parsed.rows.length} transacciones

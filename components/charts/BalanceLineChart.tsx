@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatCurrency, formatMonth } from "@/lib/format";
 import { niceTicks } from "@/lib/chartScale";
+import { useAppStore } from "@/lib/store";
 import { ChartTooltip } from "./ChartTooltip";
 
 interface Point {
@@ -18,6 +19,7 @@ const HEIGHT = 280;
 const PAD = { top: 16, right: 24, bottom: 32, left: 64 };
 
 export function BalanceLineChart({ data }: Props) {
+  const currency = useAppStore((s) => s.currency);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   if (data.length === 0) return <EmptyState />;
@@ -52,7 +54,7 @@ export function BalanceLineChart({ data }: Props) {
           <g key={t} pointerEvents="none">
             <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--gridline)" strokeWidth={1} />
             <text x={PAD.left - 8} y={y(t)} textAnchor="end" dominantBaseline="middle" fontSize={11} fill="var(--text-muted)">
-              {formatCurrency(t)}
+              {formatCurrency(t, currency)}
             </text>
           </g>
         ))}
@@ -97,7 +99,7 @@ export function BalanceLineChart({ data }: Props) {
           y={y(data[hoverIdx].balance) - 8}
           containerWidth={width}
           title={formatMonth(data[hoverIdx].month)}
-          rows={[{ label: "Balance acumulado", value: formatCurrency(data[hoverIdx].balance), colorVar: "var(--series-1)" }]}
+          rows={[{ label: "Balance acumulado", value: formatCurrency(data[hoverIdx].balance, currency), colorVar: "var(--series-1)" }]}
         />
       )}
     </div>

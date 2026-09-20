@@ -23,7 +23,7 @@ import type { Category, Transaction } from "./types";
  * fire in a static export (no React runtime shipped), but every value they'd
  * show is already direct-labeled on the chart, so nothing is lost.
  */
-export function exportDashboardHtml(transactions: Transaction[], categories: Category[]): void {
+export function exportDashboardHtml(transactions: Transaction[], categories: Category[], currency: string = "EUR"): void {
   const kpis = computeKpis(transactions);
   const monthly = monthlySummaries(transactions);
   const balance = cumulativeBalance(monthly);
@@ -43,6 +43,7 @@ export function exportDashboardHtml(transactions: Transaction[], categories: Cat
   const html = buildDocument({
     generatedAt: new Date().toLocaleString("es-ES"),
     transactionCount: transactions.length,
+    currency,
     kpis,
     barChartHtml,
     balanceChartHtml,
@@ -56,13 +57,14 @@ export function exportDashboardHtml(transactions: Transaction[], categories: Cat
 function buildDocument(args: {
   generatedAt: string;
   transactionCount: number;
+  currency: string;
   kpis: ReturnType<typeof computeKpis>;
   barChartHtml: string;
   balanceChartHtml: string;
   rateChartHtml: string;
   categoryChartHtml: string;
 }): string {
-  const { generatedAt, transactionCount, kpis, barChartHtml, balanceChartHtml, rateChartHtml, categoryChartHtml } = args;
+  const { generatedAt, transactionCount, currency, kpis, barChartHtml, balanceChartHtml, rateChartHtml, categoryChartHtml } = args;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -83,9 +85,9 @@ function buildDocument(args: {
 
   <main class="container">
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      ${statTile("Ingresos", formatCurrency(kpis.income), "good")}
-      ${statTile("Gastos", formatCurrency(kpis.expense), "bad")}
-      ${statTile("Balance", formatCurrency(kpis.balance), kpis.balance >= 0 ? "good" : "bad")}
+      ${statTile("Ingresos", formatCurrency(kpis.income, currency), "good")}
+      ${statTile("Gastos", formatCurrency(kpis.expense, currency), "bad")}
+      ${statTile("Balance", formatCurrency(kpis.balance, currency), kpis.balance >= 0 ? "good" : "bad")}
       ${statTile("Tasa de ahorro", `${kpis.savingsRate.toFixed(1)}%`, "default")}
     </div>
 

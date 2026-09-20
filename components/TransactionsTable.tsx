@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
-
-const currency = new Intl.NumberFormat("es-ES", {
-  style: "currency",
-  currency: "EUR",
-});
+import { formatCurrencyPrecise } from "@/lib/format";
 
 export function TransactionsTable() {
   const transactions = useAppStore((s) => s.transactions);
   const categories = useAppStore((s) => s.categories);
+  const currency = useAppStore((s) => s.currency);
   const setTransactionCategory = useAppStore((s) => s.setTransactionCategory);
   const renameTransaction = useAppStore((s) => s.renameTransaction);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -73,7 +70,7 @@ export function TransactionsTable() {
                   t.amount >= 0 ? "text-emerald-600" : "text-rose-600"
                 }`}
               >
-                {currency.format(t.amount)}
+                {formatCurrencyPrecise(t.amount, currency)}
               </td>
             </tr>
           ))}

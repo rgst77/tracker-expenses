@@ -1,8 +1,14 @@
 export type ColumnRole = "date" | "description" | "amount" | "ignore";
 
+export interface ParseWarning {
+  row: number;
+  message: string;
+}
+
 export interface ParsedCsv {
   headers: string[];
   rows: Record<string, string>[];
+  warnings: ParseWarning[];
 }
 
 export interface ColumnMapping {
