@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { ColumnMappingStep } from "@/components/ColumnMappingStep";
 import { TransactionsTable } from "@/components/TransactionsTable";
@@ -24,7 +24,7 @@ export default function Home() {
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [initialMapping, setInitialMapping] = useState<ColumnMapping | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(true);
   const [importSummary, setImportSummary] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
@@ -37,6 +37,18 @@ export default function Home() {
   const addCategory = useAppStore((s) => s.addCategory);
   const reset = useAppStore((s) => s.reset);
   const setCurrency = useAppStore((s) => s.setCurrency);
+
+  // Static export + "use client" means the first paint (server and client
+  // alike) always shows the empty default state — rehydrate from
+  // localStorage only after mount, then jump straight to the saved data if
+  // there was any, instead of making a returning user re-upload everything.
+  useEffect(() => {
+    const unsub = useAppStore.persist.onFinishHydration((state) => {
+      if (state.transactions.length > 0) setStep("review");
+    });
+    useAppStore.persist.rehydrate();
+    return unsub;
+  }, []);
 
   function handleCsvFile(file: File) {
     const reader = new FileReader();
@@ -225,18 +237,50 @@ export default function Home() {
               {importSummary}
             </div>
           )}
+          <button
+            onClick={() => setShowCategoryManager((v) => !v)}
+            className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-shadow hover:shadow-md"
+            style={{
+              background: "color-mix(in srgb, var(--series-1) 8%, var(--surface-1))",
+              border: "1px solid var(--series-1)",
+            }}
+          >
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: "var(--series-1)" }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83Z" />
+                <circle cx="7.5" cy="7.5" r="1.25" fill="white" stroke="none" />
+              </svg>
+            </span>
+            <span className="flex-1">
+              <span className="block text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Editar categorías y gastos
+              </span>
+              <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                Crea categorías, renombra gastos y enseña reglas para que se categoricen solos
+              </span>
+            </span>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--text-muted)"
+              strokeWidth="2"
+              style={{ transform: showCategoryManager ? "rotate(180deg)" : "none", transition: "transform 150ms" }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          {showCategoryManager && <CategoryManager />}
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {transactions.length} transacciones importadas
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setShowCategoryManager((v) => !v)}
-                className="rounded border px-3 py-1.5 text-sm font-medium"
-                style={{ borderColor: "var(--gridline)", color: "var(--text-primary)" }}
-              >
-                {showCategoryManager ? "Ocultar categorías" : "Gestionar categorías"}
-              </button>
               <button
                 onClick={handleExportExcel}
                 disabled={exporting}
@@ -273,7 +317,6 @@ export default function Home() {
               </button>
             </div>
           </div>
-          {showCategoryManager && <CategoryManager />}
           <Dashboard />
           <TransactionsTable />
         </div>

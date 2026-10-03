@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { categorize, DEFAULT_CATEGORIES, DEFAULT_RULES, UNCATEGORIZED } from "./categorize";
 import { mergeTransactions } from "./mergeTransactions";
 import type { Category, CategoryRule, Transaction } from "./types";
@@ -26,80 +27,91 @@ interface AppState {
   removeRule: (id: string) => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
-  transactions: [],
-  categories: DEFAULT_CATEGORIES,
-  rules: DEFAULT_RULES,
-  currency: "EUR",
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      transactions: [],
+      categories: DEFAULT_CATEGORIES,
+      rules: DEFAULT_RULES,
+      currency: "EUR",
 
-  loadTransactions: (transactions) => set({ transactions }),
+      loadTransactions: (transactions) => set({ transactions }),
 
-  appendTransactions: (incoming) => {
-    const { merged, added, skipped } = mergeTransactions(get().transactions, incoming);
-    set({ transactions: merged });
-    return { added, skipped };
-  },
+      appendTransactions: (incoming) => {
+        const { merged, added, skipped } = mergeTransactions(get().transactions, incoming);
+        set({ transactions: merged });
+        return { added, skipped };
+      },
 
-  reset: () => set({ transactions: [] }),
-  setCurrency: (currency) => set({ currency }),
+      reset: () => set({ transactions: [] }),
+      setCurrency: (currency) => set({ currency }),
 
-  renameTransaction: (id, description) =>
-    set((state) => ({
-      transactions: state.transactions.map((t) =>
-        t.id === id ? { ...t, description } : t
-      ),
-    })),
+      renameTransaction: (id, description) =>
+        set((state) => ({
+          transactions: state.transactions.map((t) =>
+            t.id === id ? { ...t, description } : t
+          ),
+        })),
 
-  setTransactionCategory: (id, category) =>
-    set((state) => ({
-      transactions: state.transactions.map((t) =>
-        t.id === id ? { ...t, category } : t
-      ),
-    })),
+      setTransactionCategory: (id, category) =>
+        set((state) => ({
+          transactions: state.transactions.map((t) =>
+            t.id === id ? { ...t, category } : t
+          ),
+        })),
 
-  addCategory: (name) =>
-    set((state) =>
-      !name.trim() || state.categories.some((c) => c.name === name)
-        ? state
-        : { categories: [...state.categories, { name }] }
-    ),
-
-  renameCategory: (oldName, newName) =>
-    set((state) => {
-      const trimmed = newName.trim();
-      if (!trimmed || oldName === trimmed || state.categories.some((c) => c.name === trimmed)) {
-        return state;
-      }
-      return {
-        categories: state.categories.map((c) => (c.name === oldName ? { name: trimmed } : c)),
-        transactions: state.transactions.map((t) =>
-          t.category === oldName ? { ...t, category: trimmed } : t
+      addCategory: (name) =>
+        set((state) =>
+          !name.trim() || state.categories.some((c) => c.name === name)
+            ? state
+            : { categories: [...state.categories, { name }] }
         ),
-        rules: state.rules.map((r) => (r.category === oldName ? { ...r, category: trimmed } : r)),
-      };
+
+      renameCategory: (oldName, newName) =>
+        set((state) => {
+          const trimmed = newName.trim();
+          if (!trimmed || oldName === trimmed || state.categories.some((c) => c.name === trimmed)) {
+            return state;
+          }
+          return {
+            categories: state.categories.map((c) => (c.name === oldName ? { name: trimmed } : c)),
+            transactions: state.transactions.map((t) =>
+              t.category === oldName ? { ...t, category: trimmed } : t
+            ),
+            rules: state.rules.map((r) => (r.category === oldName ? { ...r, category: trimmed } : r)),
+          };
+        }),
+
+      removeCategory: (name) =>
+        set((state) => ({
+          categories: state.categories.filter((c) => c.name !== name),
+          transactions: state.transactions.map((t) =>
+            t.category === name ? { ...t, category: UNCATEGORIZED } : t
+          ),
+          rules: state.rules.filter((r) => r.category !== name),
+        })),
+
+      addRule: (keyword, category) =>
+        set((state) => {
+          const rules = [...state.rules, { id: crypto.randomUUID(), keyword, category }];
+          // Re-apply immediately so a rule learned from one transaction also
+          // fixes every other already-uncategorized transaction it matches —
+          // otherwise it would only take effect on the *next* CSV upload.
+          const transactions = state.transactions.map((t) =>
+            t.category === UNCATEGORIZED ? { ...t, category: categorize(t.description, t.amount, rules) } : t
+          );
+          return { rules, transactions };
+        }),
+
+      removeRule: (id) =>
+        set((state) => ({ rules: state.rules.filter((r) => r.id !== id) })),
     }),
-
-  removeCategory: (name) =>
-    set((state) => ({
-      categories: state.categories.filter((c) => c.name !== name),
-      transactions: state.transactions.map((t) =>
-        t.category === name ? { ...t, category: UNCATEGORIZED } : t
-      ),
-      rules: state.rules.filter((r) => r.category !== name),
-    })),
-
-  addRule: (keyword, category) =>
-    set((state) => {
-      const rules = [...state.rules, { id: crypto.randomUUID(), keyword, category }];
-      // Re-apply immediately so a rule learned from one transaction also
-      // fixes every other already-uncategorized transaction it matches —
-      // otherwise it would only take effect on the *next* CSV upload.
-      const transactions = state.transactions.map((t) =>
-        t.category === UNCATEGORIZED ? { ...t, category: categorize(t.description, t.amount, rules) } : t
-      );
-      return { rules, transactions };
-    }),
-
-  removeRule: (id) =>
-    set((state) => ({ rules: state.rules.filter((r) => r.id !== id) })),
-}));
+    {
+      name: "tracker-expenses",
+      storage: createJSONStorage(() => localStorage),
+      // Hydrate manually after mount (see app/page.tsx) so the very first
+      // client render matches the server's — avoids a hydration mismatch.
+      skipHydration: true,
+    }
+  )
+);
