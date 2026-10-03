@@ -1,4 +1,5 @@
 import type { Transaction } from "./types";
+import { downloadBlob } from "./download";
 
 const HEADER_FILL = "FF2A78D6"; // series-1 blue, ARGB
 const HEADER_FONT = "FFFFFFFF";
@@ -66,15 +67,4 @@ export async function exportTransactionsToExcel(transactions: Transaction[], cur
 
 function todayStamp(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }

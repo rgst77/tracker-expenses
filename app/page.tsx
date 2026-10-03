@@ -38,11 +38,15 @@ export default function Home() {
   const reset = useAppStore((s) => s.reset);
   const setCurrency = useAppStore((s) => s.setCurrency);
 
-  function handleFileText(text: string) {
-    const csv = parseCsvText(text);
-    setParsed(csv);
-    setInitialMapping(guessColumnMapping(csv));
-    setStep("mapping");
+  function handleCsvFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const csv = parseCsvText(String(reader.result ?? ""));
+      setParsed(csv);
+      setInitialMapping(guessColumnMapping(csv));
+      setStep("mapping");
+    };
+    reader.readAsText(file);
   }
 
   function handleConfirmMapping(mapping: ColumnMapping, currency: string) {
@@ -76,7 +80,17 @@ export default function Home() {
     setRestoring(true);
     setRestoreError(null);
     try {
-      const restored = await importTransactionsFromExcel(file);
+      const { transactions: restored, currency: restoredCurrency } = await importTransactionsFromExcel(file);
+
+      if (transactions.length === 0) {
+        if (restoredCurrency) setCurrency(restoredCurrency);
+      } else if (restoredCurrency && restoredCurrency !== currency) {
+        setRestoreError(
+          `Este Excel está en ${restoredCurrency}, pero tus datos ya cargados están en ${currency}. Los importes no se convierten entre monedas — empieza de cero si quieres usar este archivo.`
+        );
+        return;
+      }
+
       const knownCategories = new Set(categories.map((c) => c.name));
       for (const t of restored) {
         if (t.category && !knownCategories.has(t.category)) {
@@ -142,27 +156,34 @@ export default function Home() {
               </button>
             </div>
           )}
-          <FileUpload onFileText={handleFileText} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Primera vez aquí
+              </p>
+              <FileUpload
+                accept=".csv,text/csv"
+                title="Arrastra tu CSV aquí"
+                hint="El movimiento bancario que descargas de tu banco"
+                onFile={handleCsvFile}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                ¿Ya lo has usado antes?
+              </p>
+              <FileUpload
+                accept=".xlsx"
+                title={restoring ? "Restaurando…" : "Arrastra tu Excel anterior"}
+                hint="El que descargaste la última vez — juntamos tu histórico"
+                disabled={restoring}
+                onFile={handleRestoreExcel}
+              />
+            </div>
+          </div>
 
           {transactions.length === 0 && <HowItWorks />}
 
-          <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            <span>¿Tienes un Excel descargado antes de esta app?</span>
-            <label className="cursor-pointer font-medium text-blue-600 hover:underline">
-              {restoring ? "Restaurando…" : "Súbelo para juntar tu histórico"}
-              <input
-                type="file"
-                accept=".xlsx"
-                className="hidden"
-                disabled={restoring}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleRestoreExcel(file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-          </div>
           {restoreError && (
             <div
               className="rounded p-3 text-sm"

@@ -1,12 +1,28 @@
 import type { Transaction } from "./types";
 
+// Inverse of exportExcel.ts's UNAMBIGUOUS_SYMBOL map.
+const SYMBOL_TO_CURRENCY: Record<string, string> = { "€": "EUR", "£": "GBP" };
+
+/** The amount column's numFmt embeds the currency as a quoted literal (see exportExcel.ts) — read it back from there. */
+function currencyFromNumFmt(numFmt: string | undefined): string | null {
+  const match = numFmt?.match(/"([^"]+)"/);
+  if (!match) return null;
+  const label = match[1];
+  return SYMBOL_TO_CURRENCY[label] ?? label; // anything else was already stored as its own ISO code
+}
+
+export interface ExcelRestoreResult {
+  transactions: Transaction[];
+  currency: string | null;
+}
+
 /**
  * Reads back a workbook this app exported (see exportExcel.ts) so a
  * previous download can serve as the user's own persistent archive across
  * sessions — we keep no server-side storage, so the file they already have
  * on disk is the continuity mechanism.
  */
-export async function importTransactionsFromExcel(file: File): Promise<Transaction[]> {
+export async function importTransactionsFromExcel(file: File): Promise<ExcelRestoreResult> {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(await file.arrayBuffer());
@@ -27,6 +43,8 @@ export async function importTransactionsFromExcel(file: File): Promise<Transacti
     throw new Error("El Excel no tiene las columnas esperadas (Date, Description, Category, Amount).");
   }
 
+  const currency = currencyFromNumFmt(sheet.getColumn(amountCol).numFmt);
+
   const transactions: Transaction[] = [];
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return; // header
@@ -43,7 +61,7 @@ export async function importTransactionsFromExcel(file: File): Promise<Transacti
     });
   });
 
-  return transactions;
+  return { transactions, currency };
 }
 
 function cellToIsoDate(value: unknown): string {

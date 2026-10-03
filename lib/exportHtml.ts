@@ -14,6 +14,7 @@ import {
 } from "./aggregate";
 import { formatCurrency } from "./format";
 import { UNCATEGORIZED } from "./categorize";
+import { downloadBlob } from "./download";
 import type { Category, Transaction } from "./types";
 
 /**
@@ -139,16 +140,6 @@ function todayStamp(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
 
 // Minimal hand-written CSS covering only the Tailwind utility classes the
 // reused chart components render, plus the page's own chrome, plus the
