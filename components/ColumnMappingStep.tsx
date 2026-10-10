@@ -3,14 +3,21 @@
 import { useMemo, useState } from "react";
 import type { ColumnMapping, ParsedCsv } from "@/lib/types";
 import { CURRENCY_OPTIONS } from "@/lib/format";
-import { detectDateOrder, normalizeDate, type DateOrder } from "@/lib/csv";
+import {
+  detectDateOrder,
+  detectDecimalSeparator,
+  normalizeAmount,
+  normalizeDate,
+  type DateOrder,
+  type DecimalSeparator,
+} from "@/lib/csv";
 
 interface Props {
   parsed: ParsedCsv;
   initialMapping: ColumnMapping;
   existingCount: number;
   existingCurrency: string;
-  onConfirm: (mapping: ColumnMapping, currency: string, dateOrder: DateOrder) => void;
+  onConfirm: (mapping: ColumnMapping, currency: string, dateOrder: DateOrder, decimal: DecimalSeparator) => void;
   onCancel: () => void;
 }
 
@@ -41,6 +48,7 @@ export function ColumnMappingStep({
   const [mapping, setMapping] = useState(initialMapping);
   const [currency, setCurrency] = useState(existingCount > 0 ? existingCurrency : "EUR");
   const [chosenOrder, setChosenOrder] = useState<DateOrder | null>(null);
+  const [chosenDecimal, setChosenDecimal] = useState<DecimalSeparator | null>(null);
   const previewRows = parsed.rows.slice(0, 5);
 
   const dateValues = useMemo(
@@ -51,6 +59,13 @@ export function ColumnMappingStep({
   const hasSlashDates = dateValues.some((v) => /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(v.trim()));
   const dateOrder = chosenOrder ?? dateGuess.order;
   const sampleDate = dateValues.find((v) => /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(v.trim()));
+
+  const amountValues = useMemo(
+    () => (mapping.amount ? parsed.rows.map((r) => r[mapping.amount!] ?? "") : []),
+    [parsed.rows, mapping.amount]
+  );
+  const decimal = chosenDecimal ?? detectDecimalSeparator(amountValues);
+  const sampleAmount = amountValues.find((v) => /\d/.test(v));
 
   const isComplete = mapping.date && mapping.description && mapping.amount;
   const currencyMismatch = existingCount > 0 && currency !== existingCurrency;
@@ -134,6 +149,25 @@ export function ColumnMappingStep({
             ))}
           </select>
         </label>
+        {mapping.amount && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium" style={{ color: "var(--text-primary)" }}>Formato de importes</span>
+            <select
+              className="rounded border px-2 py-1.5"
+              style={selectStyle}
+              value={decimal}
+              onChange={(e) => setChosenDecimal(e.target.value as DecimalSeparator)}
+            >
+              <option value=",">1.234,56 (coma decimal)</option>
+              <option value=".">1,234.56 (punto decimal)</option>
+            </select>
+            {sampleAmount && (
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {sampleAmount} → {normalizeAmount(sampleAmount, decimal)}
+              </span>
+            )}
+          </label>
+        )}
         {hasSlashDates && (
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium" style={{ color: "var(--text-primary)" }}>Formato de fecha</span>
@@ -206,7 +240,7 @@ export function ColumnMappingStep({
         </button>
         <button
           disabled={!isComplete || currencyMismatch}
-          onClick={() => onConfirm(mapping, currency, dateOrder)}
+          onClick={() => onConfirm(mapping, currency, dateOrder, decimal)}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {existingCount > 0 ? "Añadir" : "Importar"} {parsed.rows.length} transacciones

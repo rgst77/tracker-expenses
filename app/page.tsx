@@ -9,7 +9,7 @@ import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HowItWorks } from "@/components/HowItWorks";
 import { CategoryManager } from "@/components/CategoryManager";
-import { guessColumnMapping, normalizeAmount, normalizeDate, parseCsvText, type DateOrder } from "@/lib/csv";
+import { guessColumnMapping, normalizeAmount, normalizeDate, parseCsvText, type DateOrder, type DecimalSeparator } from "@/lib/csv";
 import { categorize } from "@/lib/categorize";
 import { exportTransactionsToExcel } from "@/lib/exportExcel";
 import { importTransactionsFromExcel } from "@/lib/importExcel";
@@ -61,12 +61,17 @@ export default function Home() {
     reader.readAsText(file);
   }
 
-  function handleConfirmMapping(mapping: ColumnMapping, currency: string, dateOrder: DateOrder) {
+  function handleConfirmMapping(
+    mapping: ColumnMapping,
+    currency: string,
+    dateOrder: DateOrder,
+    decimal: DecimalSeparator
+  ) {
     if (!parsed || !mapping.date || !mapping.description || !mapping.amount) return;
 
     const imported: Transaction[] = parsed.rows.map((row, i) => {
       const description = (row[mapping.description!] ?? "").trim();
-      const amount = normalizeAmount(row[mapping.amount!] ?? "0");
+      const amount = normalizeAmount(row[mapping.amount!] ?? "0", decimal);
       return {
         id: `${Date.now()}-${i}`,
         date: normalizeDate(row[mapping.date!] ?? "", dateOrder),

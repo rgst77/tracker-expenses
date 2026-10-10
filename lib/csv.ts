@@ -73,9 +73,9 @@ function looksLikeDate(value: string): boolean {
 }
 
 function looksLikeAmount(value: string): boolean {
-  const v = value.trim().replace(/[,$€\s]/g, "");
+  const v = value.trim().replace(/[$€£\s]/g, "");
   if (v === "") return false;
-  return /^-?\d+(\.\d+)?$/.test(v);
+  return /^[-+]?\(?\d[\d.,]*\)?-?$/.test(v);
 }
 
 /**
@@ -170,8 +170,39 @@ export function normalizeDate(raw: string, order: DateOrder = "dmy"): string {
   return `${year}-${month}-${day}`;
 }
 
-export function normalizeAmount(raw: string): number {
-  const cleaned = raw.trim().replace(/[$€\s]/g, "").replace(/,/g, "");
-  const n = parseFloat(cleaned);
-  return Number.isFinite(n) ? n : 0;
+export type DecimalSeparator = "." | ",";
+
+/**
+ * "1.800,00" (Spain, most of Europe/LatAm) and "1,800.00" (US/UK/NZ) are both
+ * common, and a single value like "1.800" is ambiguous — but a whole column
+ * usually isn't: a separator followed by 1-2 digits at the end is the decimal
+ * mark, and a "." followed by exactly 3 digits is a thousands mark.
+ */
+export function detectDecimalSeparator(values: string[]): DecimalSeparator {
+  let commaDecimal = false;
+  let dotDecimal = false;
+  let dotThousands = false;
+  for (const raw of values) {
+    const v = raw.trim().replace(/[^\d.,]/g, "");
+    if (/,\d{1,2}$/.test(v)) commaDecimal = true;
+    if (/\.\d{1,2}$/.test(v)) dotDecimal = true;
+    if (/\d\.\d{3}(?!\d)/.test(v) && !/\.\d{1,2}$/.test(v)) dotThousands = true;
+  }
+  if (commaDecimal && !dotDecimal) return ",";
+  if (dotDecimal && !commaDecimal) return ".";
+  if (!commaDecimal && !dotDecimal && dotThousands) return ",";
+  return ".";
+}
+
+export function normalizeAmount(raw: string, decimal: DecimalSeparator = "."): number {
+  const trimmed = raw.trim();
+  // Accounting style: (45.30) and 45.30- both mean negative.
+  const negative = /^\(.*\)$/.test(trimmed) || /-\s*$/.test(trimmed) || /^-/.test(trimmed);
+  let digits = trimmed.replace(/[^\d.,]/g, "");
+  digits = decimal === ","
+    ? digits.replace(/\./g, "").replace(",", ".")
+    : digits.replace(/,/g, "");
+  const n = parseFloat(digits);
+  if (!Number.isFinite(n)) return 0;
+  return negative ? -Math.abs(n) : n;
 }
