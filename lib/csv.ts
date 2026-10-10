@@ -125,23 +125,49 @@ export function guessColumnMapping(parsed: ParsedCsv): ColumnMapping {
   return { date, amount, description };
 }
 
+export type DateOrder = "dmy" | "mdy";
+
+export interface DateOrderGuess {
+  order: DateOrder;
+  /** True when no value in the file disambiguates day from month — the user should confirm. */
+  ambiguous: boolean;
+}
+
+const SLASH_DATE = /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/;
+
+/**
+ * 05/06/2026 can't be told apart from a single value, but a whole file
+ * usually can: any first number above 12 must be a day (dd/mm), any second
+ * number above 12 must be a day (mm/dd).
+ */
+export function detectDateOrder(values: string[]): DateOrderGuess {
+  let firstAbove12 = false;
+  let secondAbove12 = false;
+  for (const raw of values) {
+    const m = raw.trim().match(SLASH_DATE);
+    if (!m) continue;
+    if (parseInt(m[1], 10) > 12) firstAbove12 = true;
+    if (parseInt(m[2], 10) > 12) secondAbove12 = true;
+  }
+  if (firstAbove12 && !secondAbove12) return { order: "dmy", ambiguous: false };
+  if (secondAbove12 && !firstAbove12) return { order: "mdy", ambiguous: false };
+  return { order: "dmy", ambiguous: true };
+}
+
 /** Normalizes common date formats to ISO yyyy-mm-dd. Returns "" if unparseable. */
-export function normalizeDate(raw: string): string {
+export function normalizeDate(raw: string, order: DateOrder = "dmy"): string {
   const v = raw.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
 
-  const slashOrDash = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
-  if (slashOrDash) {
-    const [, a, b] = slashOrDash;
-    let year = slashOrDash[3];
-    if (year.length === 2) year = `20${year}`;
-    // Ambiguous dd/mm vs mm/dd — assume dd/mm/yyyy (most common outside the US),
-    // the mapping-confirmation step lets the user fix this if it's wrong.
-    const day = a.padStart(2, "0");
-    const month = b.padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-  return "";
+  const m = v.match(SLASH_DATE);
+  if (!m) return "";
+
+  let year = m[3];
+  if (year.length === 2) year = `20${year}`;
+  const [first, second] = [m[1].padStart(2, "0"), m[2].padStart(2, "0")];
+  const [day, month] = order === "dmy" ? [first, second] : [second, first];
+  if (parseInt(month, 10) > 12 || parseInt(day, 10) > 31) return "";
+  return `${year}-${month}-${day}`;
 }
 
 export function normalizeAmount(raw: string): number {

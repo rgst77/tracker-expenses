@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnMapping, ParsedCsv } from "@/lib/types";
 import { CURRENCY_OPTIONS } from "@/lib/format";
+import { detectDateOrder, normalizeDate, type DateOrder } from "@/lib/csv";
 
 interface Props {
   parsed: ParsedCsv;
   initialMapping: ColumnMapping;
   existingCount: number;
   existingCurrency: string;
-  onConfirm: (mapping: ColumnMapping, currency: string) => void;
+  onConfirm: (mapping: ColumnMapping, currency: string, dateOrder: DateOrder) => void;
   onCancel: () => void;
 }
 
@@ -39,7 +40,17 @@ export function ColumnMappingStep({
 }: Props) {
   const [mapping, setMapping] = useState(initialMapping);
   const [currency, setCurrency] = useState(existingCount > 0 ? existingCurrency : "EUR");
+  const [chosenOrder, setChosenOrder] = useState<DateOrder | null>(null);
   const previewRows = parsed.rows.slice(0, 5);
+
+  const dateValues = useMemo(
+    () => (mapping.date ? parsed.rows.map((r) => r[mapping.date!] ?? "") : []),
+    [parsed.rows, mapping.date]
+  );
+  const dateGuess = useMemo(() => detectDateOrder(dateValues), [dateValues]);
+  const hasSlashDates = dateValues.some((v) => /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(v.trim()));
+  const dateOrder = chosenOrder ?? dateGuess.order;
+  const sampleDate = dateValues.find((v) => /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(v.trim()));
 
   const isComplete = mapping.date && mapping.description && mapping.amount;
   const currencyMismatch = existingCount > 0 && currency !== existingCurrency;
@@ -123,7 +134,33 @@ export function ColumnMappingStep({
             ))}
           </select>
         </label>
+        {hasSlashDates && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium" style={{ color: "var(--text-primary)" }}>Formato de fecha</span>
+            <select
+              className="rounded border px-2 py-1.5"
+              style={selectStyle}
+              value={dateOrder}
+              onChange={(e) => setChosenOrder(e.target.value as DateOrder)}
+            >
+              <option value="dmy">Día / Mes / Año</option>
+              <option value="mdy">Mes / Día / Año</option>
+            </select>
+            {sampleDate && (
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {sampleDate} → {normalizeDate(sampleDate, dateOrder) || "no válida"}
+              </span>
+            )}
+          </label>
+        )}
       </div>
+
+      {hasSlashDates && dateGuess.ambiguous && chosenOrder === null && (
+        <div className="rounded p-3 text-sm" style={banner("var(--series-2)")}>
+          No podemos saber si tus fechas son día/mes o mes/día (ninguna tiene un número mayor que 12).
+          Comprueba el formato de fecha de arriba: el ejemplo muestra cómo se leerá la primera.
+        </div>
+      )}
 
       {currencyMismatch && (
         <div className="rounded p-3 text-sm" style={banner("var(--series-8)")}>
@@ -169,7 +206,7 @@ export function ColumnMappingStep({
         </button>
         <button
           disabled={!isComplete || currencyMismatch}
-          onClick={() => onConfirm(mapping, currency)}
+          onClick={() => onConfirm(mapping, currency, dateOrder)}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {existingCount > 0 ? "Añadir" : "Importar"} {parsed.rows.length} transacciones
