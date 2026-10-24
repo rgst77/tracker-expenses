@@ -6,24 +6,37 @@ import { formatCurrency } from "@/lib/format";
 import { categoryColorVar } from "@/lib/chartColors";
 import { useAppStore } from "@/lib/store";
 import { ChartTooltip } from "./ChartTooltip";
+import { useChartWidth } from "./useChartWidth";
 
 interface Props {
   data: CategoryTotal[];
   orderedExpenseCategories: string[];
+  /** Fixed width in px; omit to fill the container (the static export has no layout, so it passes one). */
+  width?: number;
 }
 
 const BAR_HEIGHT = 22;
 const BAR_GAP = 10;
-const PAD = { top: 8, right: 100, bottom: 8, left: 128 };
+const PAD_WIDE = { top: 8, right: 100, bottom: 8, left: 128 };
+const PAD_COMPACT = { top: 8, right: 76, bottom: 8, left: 92 };
 
-export function CategoryBars({ data, orderedExpenseCategories }: Props) {
+export function CategoryBars({ data, orderedExpenseCategories, width: widthOverride }: Props) {
+  const { ref, width: measured } = useChartWidth(640, widthOverride);
   const currency = useAppStore((s) => s.currency);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
-  if (data.length === 0) return <EmptyState />;
+  if (data.length === 0) {
+    return (
+      <div ref={ref}>
+        <EmptyState />
+      </div>
+    );
+  }
 
   const maxValue = Math.max(...data.map((d) => d.total), 1);
-  const width = 560;
+  const compact = measured < 440;
+  const PAD = compact ? PAD_COMPACT : PAD_WIDE;
+  const width = Math.max(measured, 260); // below this even the compact layout collides; let the wrapper scroll
   const plotWidth = width - PAD.left - PAD.right;
   const height = PAD.top + PAD.bottom + data.length * (BAR_HEIGHT + BAR_GAP) - BAR_GAP;
 
@@ -32,8 +45,8 @@ export function CategoryBars({ data, orderedExpenseCategories }: Props) {
   }
 
   return (
-    <div className="relative overflow-x-auto">
-      <svg width={width} height={height} role="img" aria-label="Gastos por categoría, de mayor a menor">
+    <div ref={ref} className="relative w-full overflow-x-auto">
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Gastos por categoría, de mayor a menor">
         {data.map((d, i) => {
           const y = PAD.top + i * (BAR_HEIGHT + BAR_GAP);
           const w = Math.max(2, barWidth(d.total));
@@ -42,7 +55,7 @@ export function CategoryBars({ data, orderedExpenseCategories }: Props) {
           return (
             <g key={d.category}>
               <text x={PAD.left - 10} y={y + BAR_HEIGHT / 2} textAnchor="end" dominantBaseline="middle" fontSize={12} fill="var(--text-primary)">
-                {truncate(d.category, 16)}
+                {truncate(d.category, compact ? 11 : 16)}
               </text>
               <path
                 d={roundedRightRect(PAD.left, y, w, BAR_HEIGHT, 4)}

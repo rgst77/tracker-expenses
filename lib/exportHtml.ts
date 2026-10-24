@@ -34,11 +34,11 @@ export function exportDashboardHtml(transactions: Transaction[], categories: Cat
     .map((c) => c.name)
     .filter((n) => n !== "Ingresos" && n !== UNCATEGORIZED);
 
-  const barChartHtml = renderToStaticMarkup(createElement(MonthlyBarChart, { data: monthly }));
-  const balanceChartHtml = renderToStaticMarkup(createElement(BalanceLineChart, { data: balance }));
-  const rateChartHtml = renderToStaticMarkup(createElement(SavingsRateChart, { data: rate }));
+  const barChartHtml = renderToStaticMarkup(createElement(MonthlyBarChart, { data: monthly, width: 940 }));
+  const balanceChartHtml = renderToStaticMarkup(createElement(BalanceLineChart, { data: balance, width: 440 }));
+  const rateChartHtml = renderToStaticMarkup(createElement(SavingsRateChart, { data: rate, width: 440 }));
   const categoryChartHtml = renderToStaticMarkup(
-    createElement(CategoryBars, { data: catTotals, orderedExpenseCategories })
+    createElement(CategoryBars, { data: catTotals, orderedExpenseCategories, width: 940 })
   );
 
   const html = buildDocument({
@@ -167,6 +167,7 @@ const DOCUMENT_CSS = `
   }
 }
 * { box-sizing: border-box; }
+svg[role="img"] { max-width: 100%; height: auto; }
 body { margin: 0; background: var(--background); color: var(--text-primary); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 .muted { color: var(--text-muted); }
 .card { background: var(--surface-1); border: 1px solid var(--gridline); box-shadow: 0 1px 2px rgba(11,11,11,0.04); }

@@ -6,9 +6,12 @@ import { formatCurrency, formatMonth } from "@/lib/format";
 import { niceTicks } from "@/lib/chartScale";
 import { useAppStore } from "@/lib/store";
 import { ChartTooltip } from "./ChartTooltip";
+import { labelEvery, useChartWidth } from "./useChartWidth";
 
 interface Props {
   data: MonthlySummary[];
+  /** Fixed width in px; omit to fill the container (the static export has no layout, so it passes one). */
+  width?: number;
 }
 
 const HEIGHT = 280;
@@ -16,12 +19,17 @@ const PAD = { top: 16, right: 16, bottom: 32, left: 56 };
 const BAR_MAX_WIDTH = 24;
 const BAR_GAP = 2;
 
-export function MonthlyBarChart({ data }: Props) {
+export function MonthlyBarChart({ data, width: widthOverride }: Props) {
+  const { ref, width } = useChartWidth(640, widthOverride);
   const currency = useAppStore((s) => s.currency);
   const [hover, setHover] = useState<{ x: number; y: number; month: string; series: "Ingresos" | "Gastos"; value: number } | null>(null);
 
   if (data.length === 0) {
-    return <EmptyState />;
+    return (
+      <div ref={ref}>
+        <EmptyState />
+      </div>
+    );
   }
 
   const maxValue = Math.max(...data.flatMap((d) => [d.income, d.expense]), 1);
@@ -29,16 +37,16 @@ export function MonthlyBarChart({ data }: Props) {
   const axisMax = ticks[ticks.length - 1];
 
   const plotHeight = HEIGHT - PAD.top - PAD.bottom;
-  const groupWidth = 72;
-  const width = PAD.left + PAD.right + data.length * groupWidth;
+  const groupWidth = Math.max(width - PAD.left - PAD.right, 40) / data.length;
+  const labelStep = labelEvery(groupWidth);
 
   function y(value: number) {
     return PAD.top + plotHeight - (value / axisMax) * plotHeight;
   }
 
   return (
-    <div className="relative overflow-x-auto">
-      <svg width={width} height={HEIGHT} role="img" aria-label="Ingresos y gastos por mes">
+    <div ref={ref} className="relative w-full">
+      <svg width={width} height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`} role="img" aria-label="Ingresos y gastos por mes">
         {ticks.map((t) => (
           <g key={t}>
             <line
@@ -65,7 +73,7 @@ export function MonthlyBarChart({ data }: Props) {
 
         {data.map((d, i) => {
           const groupX = PAD.left + i * groupWidth;
-          const barW = Math.min(BAR_MAX_WIDTH, groupWidth / 2 - BAR_GAP);
+          const barW = Math.max(2, Math.min(BAR_MAX_WIDTH, groupWidth / 2 - BAR_GAP));
           const incomeX = groupX + groupWidth / 2 - barW - BAR_GAP / 2;
           const expenseX = groupX + groupWidth / 2 + BAR_GAP / 2;
 
@@ -95,15 +103,17 @@ export function MonthlyBarChart({ data }: Props) {
                 }
                 onLeave={() => setHover(null)}
               />
-              <text
-                x={groupX + groupWidth / 2}
-                y={HEIGHT - PAD.bottom + 18}
-                textAnchor="middle"
-                fontSize={11}
-                fill="var(--text-muted)"
-              >
-                {formatMonth(d.month)}
-              </text>
+              {(data.length - 1 - i) % labelStep === 0 && (
+                <text
+                  x={groupX + groupWidth / 2}
+                  y={HEIGHT - PAD.bottom + 18}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill="var(--text-muted)"
+                >
+                  {formatMonth(d.month)}
+                </text>
+              )}
             </g>
           );
         })}

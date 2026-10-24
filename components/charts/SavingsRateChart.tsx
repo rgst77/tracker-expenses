@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatMonth } from "@/lib/format";
 import { ChartTooltip } from "./ChartTooltip";
+import { labelEvery, useChartWidth } from "./useChartWidth";
 
 interface Point {
   month: string;
@@ -12,23 +13,33 @@ interface Point {
 interface Props {
   data: Point[];
   targetRate?: number;
+  /** Fixed width in px; omit to fill the container (the static export has no layout, so it passes one). */
+  width?: number;
 }
 
 const HEIGHT = 280;
 const PAD = { top: 16, right: 24, bottom: 32, left: 48 };
 
-export function SavingsRateChart({ data, targetRate = 20 }: Props) {
+export function SavingsRateChart({ data, targetRate = 20, width: widthOverride }: Props) {
+  const { ref, width } = useChartWidth(640, widthOverride);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
-  if (data.length === 0) return <EmptyState />;
+  if (data.length === 0) {
+    return (
+      <div ref={ref}>
+        <EmptyState />
+      </div>
+    );
+  }
 
   const values = data.map((d) => d.rate);
   const axisMax = Math.max(targetRate, ...values, 10) * 1.2;
   const axisMin = Math.min(0, ...values);
 
   const plotHeight = HEIGHT - PAD.top - PAD.bottom;
-  const stepX = data.length > 1 ? 80 : 0;
-  const width = PAD.left + PAD.right + Math.max(stepX * (data.length - 1), 120);
+  const plotWidth = Math.max(width - PAD.left - PAD.right, 40);
+  const stepX = data.length > 1 ? plotWidth / (data.length - 1) : 0;
+  const labelStep = labelEvery(data.length > 1 ? stepX : plotWidth);
 
   function y(value: number) {
     return PAD.top + plotHeight - ((value - axisMin) / (axisMax - axisMin)) * plotHeight;
@@ -41,8 +52,8 @@ export function SavingsRateChart({ data, targetRate = 20 }: Props) {
   const areaPath = `${linePath} L${x(data.length - 1)},${y(axisMin)} L${x(0)},${y(axisMin)} Z`;
 
   return (
-    <div className="relative overflow-x-auto">
-      <svg width={width} height={HEIGHT} role="img" aria-label="Tasa de ahorro mensual">
+    <div ref={ref} className="relative w-full">
+      <svg width={width} height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`} role="img" aria-label="Tasa de ahorro mensual">
         <g pointerEvents="none">
           <line x1={PAD.left} x2={width - PAD.right} y1={y(0)} y2={y(0)} stroke="var(--baseline)" strokeWidth={1} />
           <text x={PAD.left - 8} y={y(0)} textAnchor="end" dominantBaseline="middle" fontSize={11} fill="var(--text-muted)">
@@ -73,18 +84,20 @@ export function SavingsRateChart({ data, targetRate = 20 }: Props) {
           <g key={d.month}>
             <circle cx={x(i)} cy={y(d.rate)} r={5} style={{ fill: "var(--series-6)", stroke: "var(--surface-1)", strokeWidth: 2 }} pointerEvents="none" />
             <rect
-              x={x(i) - stepX / 2}
+              x={data.length > 1 ? x(i) - stepX / 2 : PAD.left}
               y={PAD.top}
-              width={stepX || width}
+              width={data.length > 1 ? stepX : plotWidth}
               height={plotHeight}
               fill="transparent"
               onMouseEnter={() => setHoverIdx(i)}
               onMouseLeave={() => setHoverIdx(null)}
               tabIndex={0}
             />
-            <text x={x(i)} y={HEIGHT - PAD.bottom + 18} textAnchor="middle" fontSize={11} fill="var(--text-muted)" pointerEvents="none">
-              {formatMonth(d.month)}
-            </text>
+            {(data.length - 1 - i) % labelStep === 0 && (
+              <text x={x(i)} y={HEIGHT - PAD.bottom + 18} textAnchor="middle" fontSize={11} fill="var(--text-muted)" pointerEvents="none">
+                {formatMonth(d.month)}
+              </text>
+            )}
           </g>
         ))}
 
