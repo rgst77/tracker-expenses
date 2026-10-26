@@ -4,6 +4,13 @@ Drop in a bank CSV and get an interactive spending dashboard, a categorized tran
 
 **Live app:** https://rgst77.github.io/tracker-expenses/
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/dashboard-dark.png">
+  <img src="docs/dashboard-light.png" alt="Dashboard with income vs expenses by month, cumulative balance, savings rate and spending by category" width="100%">
+</picture>
+
+<sub>Screenshot generated from a synthetic CSV, not real bank data.</sub>
+
 ## Privacy
 
 Everything runs in your browser. Your files are never uploaded anywhere — there is no backend. Your transactions, categories, and rules are kept in your browser's `localStorage`, so they are still there next time you open the page on the same browser (and gone if you clear site data, so download your Excel to keep a copy).
